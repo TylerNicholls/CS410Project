@@ -9,13 +9,84 @@ import com.budhash.cliche.ShellFactory;
 
 import java.io.IOException;
 import java.sql.*;
+import java.util.Calendar;
 
 public class App {
     private final Connection db;
+    private final int ACTIVE = 1;
+    private final int CANCELED = 2;
+    private final int FINISHED = 3;
+
 
     public App(Connection cxn) {
         db = cxn;
     }
+
+
+    @Command
+    public void active() throws SQLException {
+        String query = "SELECT * FROM TASKS" +
+                "WHERE task_status  = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            // Set the first parameter (query key) to the series
+            stmt.setInt(1, ACTIVE);
+            // once parameters are bound we can run!
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    Date taskCreateDate = rs.getDate("task_create_date");
+                    Date taskDueDate = rs.getDate("task_due_date");
+                    System.out.format("Task_id: %d, label: %s, Create Date: %s, Due Date: %s \n",
+                            taskId, taskLabel, taskCreateDate.toString(), taskDueDate.toString());
+                }
+            }
+        }
+    }
+
+    @Command
+    public void add(String label) throws SQLException {
+        Date date = new java.sql.Date(Calendar.getInstance().getTime().getTime());
+        String insertTask = "INSERT INTO Tasks (task_label, task_create_date, task_status) VALUES (?, ?, ?)";
+        db.setAutoCommit(false);
+        int taskId;
+        try {
+            try (PreparedStatement stmt = db.prepareStatement(insertTask, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, label);
+                stmt.setDate(2, date);
+                stmt.setInt(3, ACTIVE);
+
+                stmt.executeUpdate();
+                // fetch the generated task_id!
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (!rs.next()) {
+                        throw new RuntimeException("no generated keys???");
+                    }
+                    taskId = rs.getInt(1);
+                    System.out.format("Creating task %d%n", taskId);
+                }
+            }
+            db.commit();
+        } catch (SQLException | RuntimeException e) {
+            db.rollback();
+            throw e;
+        } finally {
+            db.setAutoCommit(true);
+        }
+    }
+
+    @Command
+    public void due(int id, String dateString) throws SQLException {
+        String query = "UPDATE Tasks SET task_due_date = ? WHERE task_id = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setDate(1, Date.valueOf(dateString));
+            stmt.setInt(2, id);
+            System.out.format("Adding due date %s to %d%\n", dateString, id);
+            int nrows = stmt.executeUpdate();
+            System.out.format("updated %d tasks%n", nrows);
+        }
+    }
+
 
     @Command
     public void topAuthors() throws SQLException {
