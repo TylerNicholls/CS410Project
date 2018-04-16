@@ -98,6 +98,41 @@ public class App {
         }
     }
 
+//    Associate tags with tasks - to tag task 7 with ‘school’ and ‘homework’:
+//    tag 7 school homework
+
+    @Command
+    public void tag(int taskId, String tag1, String tag2 = null) throws SQLException {
+        Date date = new java.sql.Date(Calendar.getInstance().getTime().getTime());
+        String insertTask = "INSERT INTO Tasks (task_label, task_create_date, task_status) VALUES (?, ?, ?)";
+        db.setAutoCommit(false);
+        int taskId;
+        try {
+            try (PreparedStatement stmt = db.prepareStatement(insertTask, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, label);
+                stmt.setDate(2, date);
+                stmt.setInt(3, ACTIVE);
+
+                stmt.executeUpdate();
+                // fetch the generated task_id!
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (!rs.next()) {
+                        throw new RuntimeException("no generated keys???");
+                    }
+                    taskId = rs.getInt(1);
+                    System.out.format("Creating task %d%n", taskId);
+                }
+            }
+            db.commit();
+        } catch (SQLException | RuntimeException e) {
+            db.rollback();
+            throw e;
+        } finally {
+            db.setAutoCommit(true);
+        }
+    }
+
+
 
 
 
