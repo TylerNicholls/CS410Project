@@ -23,6 +23,10 @@ public class App {
     }
 
 
+//    View currently-active tasks - list the task IDs, labels, create dates, and due dates (if assigned):
+//    active
+
+
     @Command
     public void active() throws SQLException {
         String query = "SELECT * FROM TASKS" +
@@ -43,6 +47,10 @@ public class App {
             }
         }
     }
+
+//    Add new tasks (e.g., add a new task with the label “Finish Assignment”; it should print
+//            the task ID once it has added the task)
+//    add Finish Final Project
 
     @Command
     public void add(String label) throws SQLException {
@@ -75,6 +83,9 @@ public class App {
         }
     }
 
+//    Associate due dates with tasks - to make task 7 due on April 1:
+//    due 7 2018-04-01
+
     @Command
     public void due(int id, String dateString) throws SQLException {
         String query = "UPDATE Tasks SET task_due_date = ? WHERE task_id = ?";
@@ -86,6 +97,8 @@ public class App {
             System.out.format("updated %d tasks%n", nrows);
         }
     }
+
+
 
 
     @Command
