@@ -328,7 +328,7 @@ public class App {
         String dbUrl = args[0];
         try (Connection cxn = DriverManager.getConnection("jdbc:" + dbUrl)) {
             App shell = new App(cxn);
-            ShellFactory.createConsoleShell("article", "", shell)
+            ShellFactory.createConsoleShell("myToDoList", "", shell)
                     .commandLoop();
         }
     }
