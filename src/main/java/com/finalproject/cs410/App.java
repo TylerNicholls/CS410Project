@@ -9,7 +9,6 @@ import com.budhash.cliche.ShellFactory;
 
 import java.io.IOException;
 import java.sql.*;
-import java.util.Calendar;
 
 public class App {
     private final Connection db;
@@ -18,7 +17,7 @@ public class App {
     private final int FINISHED = 3;
 
 
-    public App(Connection cxn) {
+    public App(Connection cxn) throws SQLException {
         db = cxn;
     }
 
@@ -29,7 +28,8 @@ public class App {
 
     @Command
     public void active() throws SQLException {
-        String query = "SELECT * FROM TASKS" +
+        String query = "SELECT task_id, task_label, task_create_date, task_due_date " +
+                "FROM TASKS" +
                 "WHERE task_status  = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             // Set the first parameter (query key) to the series
@@ -39,8 +39,8 @@ public class App {
                 while (rs.next()) {
                     int taskId = rs.getInt("task_id");
                     String taskLabel = rs.getString("task_label");
-                    Date taskCreateDate = rs.getDate("task_create_date");
-                    Date taskDueDate = rs.getDate("task_due_date");
+                    Timestamp taskCreateDate = rs.getTimestamp("task_create_date");
+                    Timestamp taskDueDate = rs.getTimestamp("task_due_date");
                     System.out.format("Task_id: %d, label: %s, Create Date: %s, Due Date: %s \n",
                             taskId, taskLabel, taskCreateDate.toString(), taskDueDate.toString());
                 }
@@ -54,15 +54,13 @@ public class App {
 
     @Command
     public void add(String label) throws SQLException {
-        Date date = new java.sql.Date(Calendar.getInstance().getTime().getTime());
-        String insertTask = "INSERT INTO Tasks (task_label, task_create_date, task_status) VALUES (?, ?, ?)";
+        String insertTask = "INSERT INTO Tasks (task_label, task_status) VALUES (?, ?, ?)";
         db.setAutoCommit(false);
         int taskId;
         try {
             try (PreparedStatement stmt = db.prepareStatement(insertTask, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, label);
-                stmt.setDate(2, date);
-                stmt.setInt(3, ACTIVE);
+                stmt.setInt(2, ACTIVE);
 
                 stmt.executeUpdate();
                 // fetch the generated task_id!
@@ -102,16 +100,60 @@ public class App {
 //    tag 7 school homework
 
     @Command
-    public void tag(int taskId, String tag1, String tag2 = null) throws SQLException {
-        Date date = new java.sql.Date(Calendar.getInstance().getTime().getTime());
-        String insertTask = "INSERT INTO Tasks (task_label, task_create_date, task_status) VALUES (?, ?, ?)";
+    public void tag(int taskId, String... tag) throws SQLException {
+        for (int i = 0; i < tag.length; i++) {
+
+            int tagId = getTagIdGivenName(tag[i]);
+
+            String insertTask = "INSERT INTO TaskTags (tag_id, task_id) VALUES (?, ?)";
+            db.setAutoCommit(false);
+            try {
+                try (PreparedStatement stmt = db.prepareStatement(insertTask, Statement.RETURN_GENERATED_KEYS)) {
+                    stmt.setInt(1, taskId);
+                    stmt.setInt(2, tagId);
+
+                    stmt.executeUpdate();
+                    // fetch the generated task_id!
+                }
+                db.commit();
+
+            } catch (SQLException | RuntimeException e) {
+                db.rollback();
+                throw e;
+            } finally {
+                db.setAutoCommit(true);
+            }
+        }
+    }
+
+    private int getTagIdGivenName(String tagName) throws SQLException {
+        String query = "SELECT tag_id FROM TAGS" +
+                "WHERE name  = ?";
+        int tagId = 0;
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            // Set the first parameter (query key) to the series
+            stmt.setString(1, tagName);
+            // once parameters are bound we can run!
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.isBeforeFirst()) {
+                    tagId = insertTag(tagName);
+                } else {
+                    while (rs.next()) {
+                        tagId = rs.getInt("tag_id");
+                    }
+                }
+            }
+        }
+        return tagId;
+    }
+
+    private int insertTag(String tagName) throws SQLException {
+        String insertTag = "INSERT INTO Tags (tagName) VALUES (?)";
         db.setAutoCommit(false);
         int taskId;
         try {
-            try (PreparedStatement stmt = db.prepareStatement(insertTask, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, label);
-                stmt.setDate(2, date);
-                stmt.setInt(3, ACTIVE);
+            try (PreparedStatement stmt = db.prepareStatement(insertTag, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, tagName);
 
                 stmt.executeUpdate();
                 // fetch the generated task_id!
@@ -120,7 +162,6 @@ public class App {
                         throw new RuntimeException("no generated keys???");
                     }
                     taskId = rs.getInt(1);
-                    System.out.format("Creating task %d%n", taskId);
                 }
             }
             db.commit();
@@ -130,10 +171,136 @@ public class App {
         } finally {
             db.setAutoCommit(true);
         }
+        return taskId;
+    }
+
+
+    @Command
+    public void finish(int taskId) throws SQLException {
+        String query = "UPDATE Tasks SET task_status = ? WHERE task_id = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, FINISHED);
+            stmt.setInt(2, taskId);
+            System.out.format("Changing status %s on task %d%\n", "finished", taskId);
+            int nrows = stmt.executeUpdate();
+            System.out.format("updated %d tasks%n", nrows);
+        }
+    }
+
+    @Command
+    public void cancel(int taskId) throws SQLException {
+        String query = "UPDATE Tasks SET task_status = ? WHERE task_id = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, CANCELED);
+            stmt.setInt(2, taskId);
+            System.out.format("Changing status %s on task %d%\n", "canceled", taskId);
+            int nrows = stmt.executeUpdate();
+            System.out.format("updated %d tasks%n", nrows);
+        }
+    }
+
+    @Command
+    public void show(int taskId) throws SQLException {
+        String query = "SELECT * FROM TASKS" +
+                "WHERE task_id  = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            // Set the first parameter (query key) to the series
+            stmt.setInt(1, taskId);
+            // once parameters are bound we can run!
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+//                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    Timestamp taskCreateDate = rs.getTimestamp("task_create_date");
+                    Timestamp taskDueDate = rs.getTimestamp("task_due_date");
+                    int status = rs.getInt("task_status");
+                    String statusString = getStatusString(status);
+                    System.out.format("Task_id: %d, label: %s, Create Date: %s, Due Date: %s, Status: %s \n",
+                            taskId, taskLabel, taskCreateDate.toString(), taskDueDate.toString(), statusString);
+                }
+            }
+        }
+    }
+
+    @Command
+    public void active(String tagName) throws SQLException {
+        String query = "SELECT task_id, task_label FROM tasks" +
+                "JOIN tasktags tt on tt.task_id = tasks.task_id" +
+                "JOIN tags on tags.tag_id = tt.tag_id" +
+                "WHERE tags.tag_name  = ? AND task.task_status = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            // Set the first parameter (query key) to the series
+            stmt.setString(1, tagName);
+            stmt.setInt(2, ACTIVE);
+
+            // once parameters are bound we can run!
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    System.out.format("Task_id: %d, label: %s\n",
+                            taskId, taskLabel);
+                }
+            }
+        }
+    }
+
+    @Command
+    public void completed(String tagName) throws SQLException {
+        String query = "SELECT task_id, task_label FROM tasks" +
+                "JOIN tasktags tt on tt.task_id = tasks.task_id" +
+                "JOIN tags on tags.tag_id = tt.tag_id" +
+                "WHERE tags.tag_name  = ? AND task.task_status = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            // Set the first parameter (query key) to the series
+            stmt.setString(1, tagName);
+            stmt.setInt(2, FINISHED);
+
+            // once parameters are bound we can run!
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    System.out.format("Task_id: %d, label: %s\n",
+                            taskId, taskLabel);
+                }
+            }
+        }
+    }
+
+    @Command
+    public void overdue() throws SQLException {
+        String query = "SELECT task_id, task_label FROM tasks" +
+                "WHERE NOT (task_status = ?) AND task_due_date < current_timestamp";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            // Set the first parameter (query key) to the series
+            // once parameters are bound we can run!
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+//                    int taskId = rs.getInt("task_id");
+                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    System.out.format("Task_id: %d, label: %s\n",
+                            taskId, taskLabel);
+                }
+            }
+        }
     }
 
 
 
+
+    private String getStatusString(int status) {
+        if (status == 1) {
+            return "active";
+        } else if (status == 2) {
+            return "canceled";
+        } else if (status == 3) {
+            return "finished";
+        } else {
+            return "no status";
+        }
+    }
 
 
     @Command
@@ -151,65 +318,6 @@ public class App {
                 System.out.format("  %s (with %d pubs)\n", name, count);
             }
         }
-    }
-
-    /**
-     * We can run
-     * <pre>
-     *     conference-top-authors CHI
-     * </pre>
-     * @param series
-     * @throws SQLException
-     */
-    @Command
-    public void conferenceTopAuthors(String series) throws SQLException {
-        String query = "SELECT author_id, author_name, COUNT(article_id) AS article_count" +
-                " FROM author JOIN article_author USING (author_id)" +
-                " JOIN article USING (article_id)" +
-                " JOIN proceedings USING (proc_id)" +
-                " JOIN conf_series USING (cs_id)" +
-                " WHERE cs_hb_key = ?" +
-                " GROUP BY author_id" +
-                " ORDER BY article_count DESC LIMIT 10";
-        System.out.format("Top Authors in %s by Publication Count:%n", series);
-        try (PreparedStatement stmt = db.prepareStatement(query)) {
-            // Set the first parameter (query key) to the series
-            stmt.setString(1, series);
-            // once parameters are bound we can run!
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String name = rs.getString("author_name");
-                    int count = rs.getInt("article_count");
-                    System.out.format("  %s (with %d pubs)\n", name, count);
-                }
-            }
-        }
-    }
-
-    /**
-     * SQL injection!
-     * @throws SQLException
-     */
-    @Command
-    public void badConferenceTopAuthors(String series) throws SQLException {
-        String query = "SELECT author_id, author_name, COUNT(article_id) AS article_count" +
-                " FROM author JOIN article_author USING (author_id)" +
-                " JOIN article USING (article_id)" +
-                " JOIN proceedings USING (proc_id)" +
-                " JOIN conf_series USING (cs_id)" +
-                " WHERE cs_hb_key = '" + series + "'" +
-                " GROUP BY author_id" +
-                " ORDER BY article_count DESC LIMIT 10";
-        System.out.format("Top Authors in %s by Publication Count:%n", series);
-        try (Statement stmt = db.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-            while (rs.next()) {
-                String name = rs.getString("author_name");
-                int count = rs.getInt("article_count");
-                System.out.format("  %s (with %d pubs)\n", name, count);
-            }
-        }
-
     }
 
     public static void main(String[] args) throws IOException, SQLException {
