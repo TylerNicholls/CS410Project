@@ -55,7 +55,7 @@ public class App {
     @Command
     public void add(String... input) throws SQLException {
         String label = "";
-        for (int i = 0; i < input.length; i++){
+        for (int i = 0; i < input.length; i++) {
             label += input[i];
         }
         String insertTask = "INSERT INTO Tasks (task_label, task_status) VALUES (?, ?)";
@@ -291,7 +291,107 @@ public class App {
         }
     }
 
+    //    Show tasks due today, or due in the next 3 days
+//    due today
+//    due soon
+    public void due(String timeFrame) throws SQLException {
+        if (timeFrame.equals("today")) {
+            tasksDueToday();
+        } else if (timeFrame.equals("soon")) {
+            tasksDueSoon();
+        } else {
+            System.out.println("please enter 'today' or 'soon' after due to view tasks");
+        }
+    }
 
+    private void tasksDueSoon() throws SQLException {
+        String query = "SELECT task_id, task_label FROM Tasks" +
+                " WHERE DATE_ADD(CURRENT_TIMESTAMP , INTERVAL 3 DAY) > task_due_date " +
+                "AND CURRENT_TIMESTAMP < task_due_date ";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    System.out.format("Task_id: %d, label: %s\n",
+                            taskId, taskLabel);
+                }
+            }
+        }
+    }
+
+    private void tasksDueToday() throws SQLException {
+        String query = "SELECT task_id, task_label FROM Tasks" +
+                " WHERE DAYOFYEAR(task_due_date) = DAYOFYEAR(CURRENT_TIMESTAMP) AND " +
+                " YEAR(task_due_date) = YEAR (CURRENT_TIMESTAMP )";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    System.out.format("Task_id: %d, label: %s\n",
+                            taskId, taskLabel);
+                }
+            }
+        }
+    }
+
+
+//● Change the label of a task
+//    rename 7 Finish Final Project
+
+    @Command
+    public void rename(int taskId, String... input) throws SQLException {
+        String newLabel = "";
+        for (int i = 0; i < input.length; i++) {
+            newLabel += input[i];
+        }
+        String query = "UPDATE Tasks SET task_label = ? WHERE task_id = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setString(1, newLabel);
+            stmt.setInt(2, taskId);
+//            System.out.format("Adding due date %s to %d%\n", dateString, id);
+            int nrows = stmt.executeUpdate();
+            System.out.format("updated %d tasks\n", nrows);
+        }
+    }
+
+//● Search for tasks by keyword (e.g. search for tasks having the word “project” in their
+//            label)
+//    search project
+
+
+    @Command
+    public void search(String... input) throws SQLException {
+        String searchParameter = "";
+        for (int i = 0; i < input.length; i++) {
+            searchParameter += input[i];
+        }
+        String query = " CREATE FULLTEXT INDEX task_label_idx ON Tasks(task_label)";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.executeQuery();
+
+        }
+
+        query = "SELECT task_id, task_label FROM Tasks " +
+                "WHERE MATCH(task_label) AGAINST ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setString(1, searchParameter);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int taskId = rs.getInt("task_id");
+                    String taskLabel = rs.getString("task_label");
+                    System.out.format("Task_id: %d, label: %s\n",
+                            taskId, taskLabel);
+                }
+            }
+        }
+    }
+
+
+//    SELECT article_id, title
+//    FROM article
+//    WHERE MATCH (title, abstract) AGAINST (‘trumpet’)
 
 
     private String getStatusString(int status) {
@@ -306,23 +406,6 @@ public class App {
         }
     }
 
-
-    @Command
-    public void topAuthors() throws SQLException {
-        String query = "SELECT author_id, author_name, COUNT(article_id) AS article_count" +
-                " FROM author JOIN article_author USING (author_id)" +
-                " GROUP BY author_id" +
-                " ORDER BY article_count DESC LIMIT 10";
-        System.out.println("Top Authors by Publication Count:");
-        try (Statement stmt = db.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-            while (rs.next()) {
-                String name = rs.getString("author_name");
-                int count = rs.getInt("article_count");
-                System.out.format("  %s (with %d pubs)\n", name, count);
-            }
-        }
-    }
 
     public static void main(String[] args) throws IOException, SQLException {
         String dbUrl = args[0];
