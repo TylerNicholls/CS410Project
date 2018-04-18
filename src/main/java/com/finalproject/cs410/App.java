@@ -29,8 +29,8 @@ public class App {
     @Command
     public void active() throws SQLException {
         String query = "SELECT task_id, task_label, task_create_date, task_due_date " +
-                "FROM TASKS" +
-                "WHERE task_status  = ?";
+                "FROM Tasks" +
+                " WHERE task_status  = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             // Set the first parameter (query key) to the series
             stmt.setInt(1, ACTIVE);
@@ -53,8 +53,12 @@ public class App {
 //    add Finish Final Project
 
     @Command
-    public void add(String label) throws SQLException {
-        String insertTask = "INSERT INTO Tasks (task_label, task_status) VALUES (?, ?, ?)";
+    public void add(String... input) throws SQLException {
+        String label = "";
+        for (int i = 0; i < input.length; i++){
+            label += input[i];
+        }
+        String insertTask = "INSERT INTO Tasks (task_label, task_status) VALUES (?, ?)";
         db.setAutoCommit(false);
         int taskId;
         try {
@@ -69,7 +73,7 @@ public class App {
                         throw new RuntimeException("no generated keys???");
                     }
                     taskId = rs.getInt(1);
-                    System.out.format("Creating task %d%n", taskId);
+                    System.out.format("Creating task %d\n", taskId);
                 }
             }
             db.commit();
@@ -85,14 +89,14 @@ public class App {
 //    due 7 2018-04-01
 
     @Command
-    public void due(int id, String dateString) throws SQLException {
+    public void due(int taskId, String dateString) throws SQLException {
         String query = "UPDATE Tasks SET task_due_date = ? WHERE task_id = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setDate(1, Date.valueOf(dateString));
-            stmt.setInt(2, id);
-            System.out.format("Adding due date %s to %d%\n", dateString, id);
+            stmt.setInt(2, taskId);
+//            System.out.format("Adding due date %s to %d%\n", dateString, id);
             int nrows = stmt.executeUpdate();
-            System.out.format("updated %d tasks%n", nrows);
+            System.out.format("updated %d tasks\n", nrows);
         }
     }
 
@@ -127,8 +131,8 @@ public class App {
     }
 
     private int getTagIdGivenName(String tagName) throws SQLException {
-        String query = "SELECT tag_id FROM TAGS" +
-                "WHERE name  = ?";
+        String query = "SELECT tag_id FROM Tags" +
+                " WHERE tag_name  = ?";
         int tagId = 0;
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             // Set the first parameter (query key) to the series
@@ -148,7 +152,7 @@ public class App {
     }
 
     private int insertTag(String tagName) throws SQLException {
-        String insertTag = "INSERT INTO Tags (tagName) VALUES (?)";
+        String insertTag = "INSERT INTO Tags (tag_name) VALUES (?)";
         db.setAutoCommit(false);
         int taskId;
         try {
@@ -181,9 +185,9 @@ public class App {
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setInt(1, FINISHED);
             stmt.setInt(2, taskId);
-            System.out.format("Changing status %s on task %d%\n", "finished", taskId);
+//            System.out.format("Changing status %s on task %d%\n", "finished", taskId);
             int nrows = stmt.executeUpdate();
-            System.out.format("updated %d tasks%n", nrows);
+            System.out.format("updated %d tasks\n", nrows);
         }
     }
 
@@ -195,14 +199,14 @@ public class App {
             stmt.setInt(2, taskId);
             System.out.format("Changing status %s on task %d%\n", "canceled", taskId);
             int nrows = stmt.executeUpdate();
-            System.out.format("updated %d tasks%n", nrows);
+            System.out.format("updated %d tasks\n", nrows);
         }
     }
 
     @Command
     public void show(int taskId) throws SQLException {
-        String query = "SELECT * FROM TASKS" +
-                "WHERE task_id  = ?";
+        String query = "SELECT * FROM Tasks" +
+                " WHERE task_id  = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             // Set the first parameter (query key) to the series
             stmt.setInt(1, taskId);
@@ -224,10 +228,10 @@ public class App {
 
     @Command
     public void active(String tagName) throws SQLException {
-        String query = "SELECT task_id, task_label FROM tasks" +
-                "JOIN tasktags tt on tt.task_id = tasks.task_id" +
-                "JOIN tags on tags.tag_id = tt.tag_id" +
-                "WHERE tags.tag_name  = ? AND task.task_status = ?";
+        String query = "SELECT Tasks.task_id, Tasks.task_label FROM Tasks" +
+                " JOIN TaskTags tt on tt.task_id = Tasks.task_id" +
+                " JOIN Tags on Tags.tag_id = tt.tag_id" +
+                " WHERE Tags.tag_name  = ? AND Tasks.task_status = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             // Set the first parameter (query key) to the series
             stmt.setString(1, tagName);
@@ -247,10 +251,10 @@ public class App {
 
     @Command
     public void completed(String tagName) throws SQLException {
-        String query = "SELECT task_id, task_label FROM tasks" +
-                "JOIN tasktags tt on tt.task_id = tasks.task_id" +
-                "JOIN tags on tags.tag_id = tt.tag_id" +
-                "WHERE tags.tag_name  = ? AND task.task_status = ?";
+        String query = "SELECT Tasks.task_id, Tasks.task_label FROM Tasks" +
+                " JOIN TaskTags tt on tt.task_id = Tasks.task_id" +
+                " JOIN Tags on Tags.tag_id = tt.tag_id" +
+                " WHERE Tags.tag_name  = ? AND Tasks.task_status = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             // Set the first parameter (query key) to the series
             stmt.setString(1, tagName);
@@ -270,8 +274,8 @@ public class App {
 
     @Command
     public void overdue() throws SQLException {
-        String query = "SELECT task_id, task_label FROM tasks" +
-                "WHERE NOT (task_status = ?) AND task_due_date < current_timestamp";
+        String query = "SELECT task_id, task_label FROM Tasks" +
+                " WHERE NOT (task_status = ?) AND task_due_date < current_timestamp";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             // Set the first parameter (query key) to the series
             // once parameters are bound we can run!
