@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS TaskTags(
 CREATE TABLE IF NOT EXISTS Tasks (
   task_id          INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
   task_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  task_due_date    TIMESTAMP,
+  task_due_date    TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
   task_status      TINYINT         NOT NULL,
   task_label       VARCHAR(100)    NOT NULL
 );
+CREATE FULLTEXT INDEX task_label_idx ON Tasks(task_label);

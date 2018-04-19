@@ -22,10 +22,13 @@ public class App {
     }
 
 
-//    View currently-active tasks - list the task IDs, labels, create dates, and due dates (if assigned):
-//    active
 
-
+    /**
+     * View currently-active tasks - list the task IDs, labels, create dates, and due dates (if assigned):
+     * active
+     *
+     * @throws SQLException
+     */
     @Command
     public void active() throws SQLException {
         String query = "SELECT task_id, task_label, task_create_date, task_due_date " +
@@ -48,10 +51,15 @@ public class App {
         }
     }
 
-//    Add new tasks (e.g., add a new task with the label “Finish Assignment”; it should print
-//            the task ID once it has added the task)
-//    add Finish Final Project
 
+    /**
+     * Add new tasks (e.g., add a new task with the label “Finish Assignment”; it should print
+     * the task ID once it has added the task)
+     * add Finish Final Project
+     *
+     * @param input
+     * @throws SQLException
+     */
     @Command
     public void add(String... input) throws SQLException {
         String label = "";
@@ -85,24 +93,34 @@ public class App {
         }
     }
 
-//    Associate due dates with tasks - to make task 7 due on April 1:
-//    due 7 2018-04-01
 
+    /**
+     *     Associate due dates with tasks - to make task 7 due on April 1:
+     *     due 7 2018-04-01
+     *
+     * @param taskId
+     * @param dateString
+     * @throws SQLException
+     */
     @Command
     public void due(int taskId, String dateString) throws SQLException {
         String query = "UPDATE Tasks SET task_due_date = ? WHERE task_id = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setDate(1, Date.valueOf(dateString));
             stmt.setInt(2, taskId);
-//            System.out.format("Adding due date %s to %d%\n", dateString, id);
             int nrows = stmt.executeUpdate();
             System.out.format("updated %d tasks\n", nrows);
         }
     }
 
-//    Associate tags with tasks - to tag task 7 with ‘school’ and ‘homework’:
-//    tag 7 school homework
 
+    /**
+     *     Associate tags with tasks - to tag task 7 with ‘school’ and ‘homework’:
+     *     tag 7 school homework
+     * @param taskId
+     * @param tag
+     * @throws SQLException
+     */
     @Command
     public void tag(int taskId, String... tag) throws SQLException {
         for (int i = 0; i < tag.length; i++) {
@@ -130,6 +148,13 @@ public class App {
         }
     }
 
+
+    /**
+     *
+     * @param tagName
+     * @return
+     * @throws SQLException
+     */
     private int getTagIdGivenName(String tagName) throws SQLException {
         String query = "SELECT tag_id FROM Tags" +
                 " WHERE tag_name  = ?";
@@ -151,6 +176,13 @@ public class App {
         return tagId;
     }
 
+
+    /**
+     *
+     * @param tagName
+     * @return
+     * @throws SQLException
+     */
     private int insertTag(String tagName) throws SQLException {
         String insertTag = "INSERT INTO Tags (tag_name) VALUES (?)";
         db.setAutoCommit(false);
@@ -179,6 +211,11 @@ public class App {
     }
 
 
+    /**
+     *
+     * @param taskId
+     * @throws SQLException
+     */
     @Command
     public void finish(int taskId) throws SQLException {
         String query = "UPDATE Tasks SET task_status = ? WHERE task_id = ?";
@@ -191,6 +228,12 @@ public class App {
         }
     }
 
+
+    /**
+     *
+     * @param taskId
+     * @throws SQLException
+     */
     @Command
     public void cancel(int taskId) throws SQLException {
         String query = "UPDATE Tasks SET task_status = ? WHERE task_id = ?";
@@ -203,6 +246,12 @@ public class App {
         }
     }
 
+
+    /**
+     *
+     * @param taskId
+     * @throws SQLException
+     */
     @Command
     public void show(int taskId) throws SQLException {
         String query = "SELECT * FROM Tasks" +
@@ -213,7 +262,6 @@ public class App {
             // once parameters are bound we can run!
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-//                    int taskId = rs.getInt("task_id");
                     String taskLabel = rs.getString("task_label");
                     Timestamp taskCreateDate = rs.getTimestamp("task_create_date");
                     Timestamp taskDueDate = rs.getTimestamp("task_due_date");
@@ -226,6 +274,12 @@ public class App {
         }
     }
 
+
+    /**
+     *
+     * @param tagName
+     * @throws SQLException
+     */
     @Command
     public void active(String tagName) throws SQLException {
         String query = "SELECT Tasks.task_id, Tasks.task_label FROM Tasks" +
@@ -249,6 +303,12 @@ public class App {
         }
     }
 
+
+    /**
+     *
+     * @param tagName
+     * @throws SQLException
+     */
     @Command
     public void completed(String tagName) throws SQLException {
         String query = "SELECT Tasks.task_id, Tasks.task_label FROM Tasks" +
@@ -272,6 +332,11 @@ public class App {
         }
     }
 
+
+    /**
+     *
+     * @throws SQLException
+     */
     @Command
     public void overdue() throws SQLException {
         String query = "SELECT task_id, task_label FROM Tasks" +
@@ -292,9 +357,17 @@ public class App {
         }
     }
 
-    //    Show tasks due today, or due in the next 3 days
-//    due today
-//    due soon
+
+
+
+    /**
+     * Show tasks due today, or due in the next 3 days
+     * due today
+     * due soon
+     *
+     * @param timeFrame
+     * @throws SQLException
+     */
     @Command
     public void due(String timeFrame) throws SQLException {
         if (timeFrame.equals("today")) {
@@ -306,6 +379,12 @@ public class App {
         }
     }
 
+
+    /**
+     * called from due for soon query
+     *
+     * @throws SQLException
+     */
     private void tasksDueSoon() throws SQLException {
         String query = "SELECT task_id, task_label FROM Tasks" +
                 " WHERE DATE_ADD(CURRENT_TIMESTAMP , INTERVAL 3 DAY) > task_due_date " +
@@ -322,6 +401,12 @@ public class App {
         }
     }
 
+
+    /**
+     * called from due for Today query
+     *
+     * @throws SQLException
+     */
     private void tasksDueToday() throws SQLException {
         String query = "SELECT task_id, task_label FROM Tasks" +
                 " WHERE DAYOFYEAR(task_due_date) = DAYOFYEAR(CURRENT_TIMESTAMP) AND " +
@@ -339,9 +424,15 @@ public class App {
     }
 
 
-//● Change the label of a task
-//    rename 7 Finish Final Project
 
+    /**
+     * Change the label of a task
+     * rename 7 Finish Final Project
+     *
+     * @param taskId
+     * @param input
+     * @throws SQLException
+     */
     @Command
     public void rename(int taskId, String... input) throws SQLException {
         String newLabel = "";
@@ -352,17 +443,18 @@ public class App {
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setString(1, newLabel);
             stmt.setInt(2, taskId);
-//            System.out.format("Adding due date %s to %d%\n", dateString, id);
             int nrows = stmt.executeUpdate();
             System.out.format("updated %d tasks\n", nrows);
         }
     }
 
-//● Search for tasks by keyword (e.g. search for tasks having the word “project” in their
-//            label)
-//    search project
 
-
+    /**
+     * Search for tasks by keyword (e.g. search for tasks having the word “project” in their
+     * label) search project
+     * @param input
+     * @throws SQLException
+     */
     @Command
     public void search(String... input) throws SQLException {
         String searchParameter = "";
@@ -370,17 +462,7 @@ public class App {
             searchParameter += input[i] + " ";
         }
 
-//        boolean indexHasBeenCreated = createIndex();
-
-//        if(!indexHasBeenCreated) {
-        String query = "CREATE IF NOT EXISTS FULLTEXT INDEX task_label_idx ON Tasks(task_label)";
-        try (PreparedStatement stmt = db.prepareStatement(query)) {
-            stmt.executeUpdate();
-
-        }
-//        }
-
-        query = "SELECT task_id, task_label FROM Tasks " +
+        String query = "SELECT task_id, task_label FROM Tasks " +
                 "WHERE MATCH(task_label) AGAINST (?)";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setString(1, searchParameter);
@@ -395,11 +477,12 @@ public class App {
         }
     }
 
-//    SELECT article_id, title
-//    FROM article
-//    WHERE MATCH (title, abstract) AGAINST (‘trumpet’)
 
-
+    /**
+     *     *
+     * @param status
+     * @return
+     */
     private String getStatusString(int status) {
         if (status == 1) {
             return "active";
