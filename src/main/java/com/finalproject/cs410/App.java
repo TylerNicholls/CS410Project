@@ -56,7 +56,7 @@ public class App {
     public void add(String... input) throws SQLException {
         String label = "";
         for (int i = 0; i < input.length; i++) {
-            label += input[i];
+            label += input[i] + " ";
         }
         String insertTask = "INSERT INTO Tasks (task_label, task_status) VALUES (?, ?)";
         db.setAutoCommit(false);
@@ -113,8 +113,8 @@ public class App {
             db.setAutoCommit(false);
             try {
                 try (PreparedStatement stmt = db.prepareStatement(insertTask, Statement.RETURN_GENERATED_KEYS)) {
-                    stmt.setInt(1, taskId);
-                    stmt.setInt(2, tagId);
+                    stmt.setInt(1, tagId);
+                    stmt.setInt(2, taskId);
 
                     stmt.executeUpdate();
                     // fetch the generated task_id!
@@ -185,7 +185,7 @@ public class App {
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setInt(1, FINISHED);
             stmt.setInt(2, taskId);
-//            System.out.format("Changing status %s on task %d%\n", "finished", taskId);
+            System.out.format("Changing status finished on task %d%\n", taskId);
             int nrows = stmt.executeUpdate();
             System.out.format("updated %d tasks\n", nrows);
         }
@@ -197,7 +197,7 @@ public class App {
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setInt(1, CANCELED);
             stmt.setInt(2, taskId);
-            System.out.format("Changing status %s on task %d%\n", "canceled", taskId);
+            System.out.format("Changing status canceled on task %d\n", taskId);
             int nrows = stmt.executeUpdate();
             System.out.format("updated %d tasks\n", nrows);
         }
@@ -277,6 +277,7 @@ public class App {
         String query = "SELECT task_id, task_label FROM Tasks" +
                 " WHERE NOT (task_status = ?) AND task_due_date < current_timestamp";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, FINISHED);
             // Set the first parameter (query key) to the series
             // once parameters are bound we can run!
             try (ResultSet rs = stmt.executeQuery()) {
@@ -294,6 +295,7 @@ public class App {
     //    Show tasks due today, or due in the next 3 days
 //    due today
 //    due soon
+    @Command
     public void due(String timeFrame) throws SQLException {
         if (timeFrame.equals("today")) {
             tasksDueToday();
@@ -323,7 +325,7 @@ public class App {
     private void tasksDueToday() throws SQLException {
         String query = "SELECT task_id, task_label FROM Tasks" +
                 " WHERE DAYOFYEAR(task_due_date) = DAYOFYEAR(CURRENT_TIMESTAMP) AND " +
-                " YEAR(task_due_date) = YEAR (CURRENT_TIMESTAMP )";
+                " YEAR(task_due_date) = YEAR(CURRENT_TIMESTAMP )";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -344,7 +346,7 @@ public class App {
     public void rename(int taskId, String... input) throws SQLException {
         String newLabel = "";
         for (int i = 0; i < input.length; i++) {
-            newLabel += input[i];
+            newLabel += input[i] + " ";
         }
         String query = "UPDATE Tasks SET task_label = ? WHERE task_id = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
@@ -365,16 +367,21 @@ public class App {
     public void search(String... input) throws SQLException {
         String searchParameter = "";
         for (int i = 0; i < input.length; i++) {
-            searchParameter += input[i];
+            searchParameter += input[i] + " ";
         }
-        String query = " CREATE FULLTEXT INDEX task_label_idx ON Tasks(task_label)";
+
+//        boolean indexHasBeenCreated = createIndex();
+
+//        if(!indexHasBeenCreated) {
+        String query = "CREATE IF NOT EXISTS FULLTEXT INDEX task_label_idx ON Tasks(task_label)";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
-            stmt.executeQuery();
+            stmt.executeUpdate();
 
         }
+//        }
 
         query = "SELECT task_id, task_label FROM Tasks " +
-                "WHERE MATCH(task_label) AGAINST ?";
+                "WHERE MATCH(task_label) AGAINST (?)";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setString(1, searchParameter);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -387,7 +394,6 @@ public class App {
             }
         }
     }
-
 
 //    SELECT article_id, title
 //    FROM article
