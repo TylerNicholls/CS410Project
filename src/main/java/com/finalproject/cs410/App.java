@@ -126,7 +126,11 @@ public class App {
         for (int i = 0; i < tag.length; i++) {
 
             int tagId = getTagIdGivenName(tag[i]);
+            boolean alreadyExists = checkIfTaskTagExists(taskId, tagId);
 
+            if(alreadyExists){
+                return;
+            }
             String insertTask = "INSERT INTO TaskTags (tag_id, task_id) VALUES (?, ?)";
             db.setAutoCommit(false);
             try {
@@ -146,6 +150,30 @@ public class App {
                 db.setAutoCommit(true);
             }
         }
+    }
+
+    private boolean checkIfTaskTagExists(int taskId, int tagId) throws SQLException {
+        boolean exists = false;
+
+        String query = "SELECT tasktag_id FROM TaskTags" +
+                " WHERE task_id  = ? AND tag_id = ?";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            // Set the first parameter (query key) to the series
+            stmt.setInt(1, taskId);
+            stmt.setInt(2, tagId);
+
+            // once parameters are bound we can run!
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.isBeforeFirst()) {
+                    exists = false;
+                } else {
+                    while (rs.next()) {
+                        exists = true;
+                    }
+                }
+            }
+        }
+        return exists;
     }
 
 
