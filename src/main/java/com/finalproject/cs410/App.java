@@ -250,8 +250,8 @@ public class App {
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setInt(1, FINISHED);
             stmt.setInt(2, taskId);
-            System.out.format("Changing status finished on task %d%\n", taskId);
             int nrows = stmt.executeUpdate();
+            System.out.format("Changing status finished on task %d\n", taskId);
             System.out.format("updated %d tasks\n", nrows);
         }
     }
@@ -368,9 +368,9 @@ public class App {
     @Command
     public void overdue() throws SQLException {
         String query = "SELECT task_id, task_label FROM Tasks" +
-                " WHERE NOT (task_status = ?) AND task_due_date < current_timestamp";
+                " WHERE (task_status = ?) AND task_due_date < current_timestamp";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
-            stmt.setInt(1, FINISHED);
+            stmt.setInt(1, ACTIVE);
             // Set the first parameter (query key) to the series
             // once parameters are bound we can run!
             try (ResultSet rs = stmt.executeQuery()) {
@@ -416,8 +416,10 @@ public class App {
     private void tasksDueSoon() throws SQLException {
         String query = "SELECT task_id, task_label FROM Tasks" +
                 " WHERE DATE_ADD(CURRENT_TIMESTAMP , INTERVAL 3 DAY) > task_due_date " +
-                "AND CURRENT_TIMESTAMP < task_due_date ";
+                " AND CURRENT_TIMESTAMP < task_due_date" +
+                " AND Tasks.task_status = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, ACTIVE);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     int taskId = rs.getInt("task_id");
@@ -437,9 +439,11 @@ public class App {
      */
     private void tasksDueToday() throws SQLException {
         String query = "SELECT task_id, task_label FROM Tasks" +
-                " WHERE DAYOFYEAR(task_due_date) = DAYOFYEAR(CURRENT_TIMESTAMP) AND " +
-                " YEAR(task_due_date) = YEAR(CURRENT_TIMESTAMP )";
+                " WHERE DATE_ADD(CURRENT_TIMESTAMP , INTERVAL 1 DAY) > task_due_date " +
+                " AND CURRENT_TIMESTAMP < task_due_date" +
+                " AND Tasks.task_status = ?";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, ACTIVE);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     int taskId = rs.getInt("task_id");
