@@ -1,18 +1,10 @@
-
+DROP DATABASE TodoManager;
 CREATE DATABASE IF NOT EXISTS TodoManager;
 USE TodoManager;
 
 CREATE TABLE IF NOT EXISTS Tags(
   tag_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
   tag_name VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS TaskTags(
-  tasktag_id       INT PRIMARY KEY  NOT NULL AUTO_INCREMENT,
-  tag_id           INT,
-  FOREIGN KEY (tag_id) REFERENCES Tags(tag_id),
-  task_id INT,
-  FOREIGN KEY (task_id) REFERENCES Tags(task_id)
 );
 
 CREATE TABLE IF NOT EXISTS Tasks (
@@ -22,6 +14,16 @@ CREATE TABLE IF NOT EXISTS Tasks (
   task_status      TINYINT         NOT NULL,
   task_label       VARCHAR(100)    NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS TaskTags(
+  tasktag_id       INT PRIMARY KEY  NOT NULL AUTO_INCREMENT,
+  tag_id           INT,
+  FOREIGN KEY (tag_id) REFERENCES Tags(tag_id),
+  task_id INT,
+  FOREIGN KEY (task_id) REFERENCES Tasks(task_id)
+);
+
+
 CREATE FULLTEXT INDEX task_label_idx ON Tasks(task_label);
 
 
@@ -44,7 +46,35 @@ INSERT INTO Tasks(task_create_date, task_due_date, task_status, task_label) VALU
 INSERT INTO Tasks(task_create_date, task_due_date, task_status, task_label) VALUE ('2018-04-14 14:36:20', '2018-04-29 23:59:59', 1, 'Buy Red Hat Stock');
 INSERT INTO Tasks(task_create_date, task_due_date, task_status, task_label) VALUE ('2018-04-20 14:36:20', '2018-05-01 00:00:01', 1, 'Create more aggressive todo list');
 
+INSERT INTO Tags(tag_name) VALUE ('school');
+INSERT INTO Tags(tag_name) VALUE ('world_domination');
+INSERT INTO Tags(tag_name) VALUE ('amusement');
+INSERT INTO Tags(tag_name) VALUE ('self_improvement');
+INSERT INTO Tags(tag_name) VALUE ('serenity');
+INSERT INTO Tags(tag_name) VALUE ('homework');
 
+INSERT INTO TaskTags(tag_id, task_id) VALUE (1,1);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (1,2);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (6,2);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,3);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,4);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,10);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,11);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,12);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,14);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (3,15);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (4,15);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (1,16);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,16);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (3,16);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (4,16);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (5,16);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (4,5);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (4,6);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (4,7);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (4,8);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (4,9);
+INSERT INTO TaskTags(tag_id, task_id) VALUE (2,18);
 
 
 
