@@ -20,6 +20,8 @@ Creates an executable jar file that runs a basic ToDo list from the command line
 ├── CS410-Project.pdf
 └── README.md
 
+Also available at:
+git@github.com:TylerNicholls/CS410Project.git
 
 
 ##Building and Running the project
